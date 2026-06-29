@@ -1,0 +1,1933 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="color-scheme" content="light" />
+  <title>學生資料後台管理系統</title>
+
+  <!-- SheetJS Community Edition：瀏覽器端解析 Excel -->
+  <script defer src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+  <!-- Google Identity Services：OAuth 存取權杖 -->
+  <script async defer src="https://accounts.google.com/gsi/client"></script>
+
+  <style>
+    :root {
+      --bg: #f4f7fb;
+      --panel: #ffffff;
+      --panel-soft: #f8fafc;
+      --text: #172033;
+      --muted: #667085;
+      --line: #e4e9f1;
+      --primary: #2563eb;
+      --primary-dark: #1d4ed8;
+      --primary-soft: #eff6ff;
+      --success: #15803d;
+      --success-soft: #ecfdf3;
+      --warning: #b45309;
+      --warning-soft: #fff7ed;
+      --danger: #b42318;
+      --danger-soft: #fff1f0;
+      --shadow: 0 10px 30px rgba(20, 35, 70, 0.08);
+      --radius: 16px;
+    }
+
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: var(--bg);
+      color: var(--text);
+      font-family: Inter, "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", system-ui, sans-serif;
+    }
+
+    button, input { font: inherit; }
+
+    button {
+      border: 0;
+      border-radius: 10px;
+      padding: 11px 16px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: 0.18s ease;
+    }
+
+    button:disabled {
+      cursor: not-allowed;
+      opacity: 0.52;
+    }
+
+    button:not(:disabled):hover { transform: translateY(-1px); }
+
+    .btn-primary {
+      background: var(--primary);
+      color: white;
+      box-shadow: 0 7px 16px rgba(37, 99, 235, 0.2);
+    }
+
+    .btn-primary:not(:disabled):hover { background: var(--primary-dark); }
+
+    .btn-secondary {
+      background: white;
+      color: var(--text);
+      border: 1px solid var(--line);
+    }
+
+    .btn-danger-soft {
+      background: var(--danger-soft);
+      color: var(--danger);
+    }
+
+    .app-shell {
+      display: grid;
+      grid-template-columns: 252px minmax(0, 1fr);
+      min-height: 100vh;
+    }
+
+    aside {
+      position: sticky;
+      top: 0;
+      height: 100vh;
+      padding: 24px 18px;
+      background: #111827;
+      color: white;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 0 6px 24px;
+      border-bottom: 1px solid rgba(255,255,255,0.12);
+    }
+
+    .brand-mark {
+      display: grid;
+      place-items: center;
+      width: 42px;
+      height: 42px;
+      border-radius: 12px;
+      background: linear-gradient(135deg, #3b82f6, #2563eb);
+      font-weight: 900;
+      font-size: 20px;
+    }
+
+    .brand h1 {
+      margin: 0;
+      font-size: 16px;
+      line-height: 1.35;
+    }
+
+    .brand small {
+      display: block;
+      margin-top: 3px;
+      color: #9ca3af;
+      font-weight: 500;
+    }
+
+    .nav {
+      margin-top: 22px;
+      display: grid;
+      gap: 8px;
+    }
+
+    .nav-item {
+      padding: 12px;
+      border-radius: 10px;
+      color: #d1d5db;
+      font-size: 14px;
+    }
+
+    .nav-item.active {
+      background: rgba(59, 130, 246, 0.2);
+      color: white;
+    }
+
+    .sidebar-meta {
+      position: absolute;
+      left: 18px;
+      right: 18px;
+      bottom: 20px;
+      padding: 14px;
+      border-radius: 12px;
+      background: rgba(255,255,255,0.06);
+      color: #cbd5e1;
+      font-size: 12px;
+      line-height: 1.65;
+      overflow-wrap: anywhere;
+    }
+
+    main {
+      min-width: 0;
+      padding: 30px;
+    }
+
+    .topbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 18px;
+      margin-bottom: 22px;
+    }
+
+    .topbar h2 {
+      margin: 0 0 7px;
+      font-size: 25px;
+      letter-spacing: -0.02em;
+    }
+
+    .topbar p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .account-box {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 9px 11px;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: var(--panel);
+      box-shadow: var(--shadow);
+    }
+
+    .account-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: #94a3b8;
+    }
+
+    .account-dot.online { background: #22c55e; }
+
+    .account-text {
+      min-width: 130px;
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    .account-text strong {
+      display: block;
+      color: var(--text);
+      font-size: 13px;
+      margin-bottom: 2px;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1.5fr) minmax(300px, 0.7fr);
+      gap: 20px;
+      align-items: start;
+    }
+
+    .card {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+
+    .card + .card { margin-top: 20px; }
+
+    .card-header {
+      display: flex;
+      justify-content: space-between;
+      gap: 16px;
+      align-items: center;
+      padding: 19px 22px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .card-header h3 {
+      margin: 0;
+      font-size: 16px;
+    }
+
+    .card-header p {
+      margin: 5px 0 0;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .card-body { padding: 22px; }
+
+    .step-badge {
+      flex: 0 0 auto;
+      display: grid;
+      place-items: center;
+      min-width: 31px;
+      height: 31px;
+      padding: 0 9px;
+      border-radius: 999px;
+      background: var(--primary-soft);
+      color: var(--primary);
+      font-size: 12px;
+      font-weight: 800;
+    }
+
+    .config-row {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 9px;
+      margin-top: 14px;
+    }
+
+    input[type="text"] {
+      width: 100%;
+      min-width: 0;
+      padding: 11px 12px;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      color: var(--text);
+      outline: none;
+      background: white;
+    }
+
+    input[type="text"]:focus {
+      border-color: #93b4ff;
+      box-shadow: 0 0 0 3px rgba(37,99,235,0.1);
+    }
+
+    .hint {
+      margin: 10px 0 0;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.55;
+    }
+
+    .warning-banner, .status-banner {
+      display: none;
+      margin-bottom: 18px;
+      padding: 13px 15px;
+      border-radius: 11px;
+      font-size: 13px;
+      line-height: 1.55;
+    }
+
+    .warning-banner.show {
+      display: block;
+      background: var(--warning-soft);
+      color: var(--warning);
+      border: 1px solid #fed7aa;
+    }
+
+    .status-banner.show { display: block; }
+
+    .status-banner.info {
+      background: var(--primary-soft);
+      color: #1e40af;
+      border: 1px solid #bfdbfe;
+    }
+
+    .status-banner.success {
+      background: var(--success-soft);
+      color: var(--success);
+      border: 1px solid #bbf7d0;
+    }
+
+    .status-banner.error {
+      background: var(--danger-soft);
+      color: var(--danger);
+      border: 1px solid #fecaca;
+    }
+
+    .drop-zone {
+      display: grid;
+      place-items: center;
+      min-height: 265px;
+      padding: 28px;
+      text-align: center;
+      border: 2px dashed #bfd0ea;
+      border-radius: 15px;
+      background: linear-gradient(180deg, #fbfdff, #f6f9fd);
+      transition: 0.2s ease;
+      cursor: pointer;
+      outline: none;
+    }
+
+    .drop-zone:hover,
+    .drop-zone.dragover,
+    .drop-zone:focus-visible {
+      border-color: var(--primary);
+      background: var(--primary-soft);
+      box-shadow: 0 0 0 4px rgba(37,99,235,0.08);
+    }
+
+    .upload-icon {
+      display: grid;
+      place-items: center;
+      width: 62px;
+      height: 62px;
+      margin: 0 auto 15px;
+      border-radius: 18px;
+      background: white;
+      color: var(--primary);
+      box-shadow: 0 8px 22px rgba(37,99,235,0.13);
+      font-size: 28px;
+    }
+
+    .drop-zone h4 {
+      margin: 0 0 8px;
+      font-size: 17px;
+    }
+
+    .drop-zone p {
+      margin: 0 0 17px;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.55;
+    }
+
+    .file-meta {
+      display: none;
+      margin-top: 15px;
+      padding: 13px 15px;
+      border-radius: 11px;
+      background: var(--panel-soft);
+      border: 1px solid var(--line);
+      font-size: 13px;
+    }
+
+    .file-meta.show {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: center;
+    }
+
+    .file-meta strong {
+      display: block;
+      margin-bottom: 4px;
+    }
+
+    .file-meta span { color: var(--muted); }
+
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 11px;
+      margin-bottom: 18px;
+    }
+
+    .stat {
+      padding: 15px;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: var(--panel-soft);
+    }
+
+    .stat span {
+      display: block;
+      margin-bottom: 7px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .stat strong {
+      font-size: 23px;
+      letter-spacing: -0.03em;
+    }
+
+    .table-wrap {
+      overflow: auto;
+      max-height: 420px;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      white-space: nowrap;
+      font-size: 12px;
+    }
+
+    th, td {
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--line);
+      text-align: left;
+    }
+
+    th {
+      position: sticky;
+      top: 0;
+      z-index: 1;
+      background: #f8fafc;
+      color: #475467;
+      font-weight: 800;
+    }
+
+    tbody tr:last-child td { border-bottom: 0; }
+    tbody tr:hover td { background: #fbfdff; }
+
+    .preview-empty {
+      padding: 30px;
+      color: var(--muted);
+      text-align: center;
+      font-size: 13px;
+    }
+
+    .mapping-list {
+      display: grid;
+      gap: 9px;
+    }
+
+    .mapping-item {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 22px minmax(0, 1fr);
+      align-items: center;
+      gap: 6px;
+      padding: 9px 10px;
+      border-radius: 10px;
+      background: var(--panel-soft);
+      border: 1px solid var(--line);
+      font-size: 12px;
+    }
+
+    .mapping-item .arrow {
+      color: #94a3b8;
+      text-align: center;
+    }
+
+    .mapping-item strong {
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .check-list {
+      display: grid;
+      gap: 10px;
+      margin: 0;
+      padding: 0;
+      list-style: none;
+    }
+
+    .check-list li {
+      display: flex;
+      gap: 9px;
+      align-items: flex-start;
+      color: #475467;
+      font-size: 13px;
+      line-height: 1.5;
+    }
+
+    .check {
+      flex: 0 0 auto;
+      display: grid;
+      place-items: center;
+      width: 20px;
+      height: 20px;
+      margin-top: 1px;
+      border-radius: 50%;
+      background: var(--success-soft);
+      color: var(--success);
+      font-size: 11px;
+      font-weight: 900;
+    }
+
+    .action-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      margin-top: 18px;
+      padding-top: 18px;
+      border-top: 1px solid var(--line);
+    }
+
+    .action-bar .hint { margin: 0; }
+
+    .progress-panel {
+      display: none;
+      margin-top: 18px;
+      padding: 15px;
+      border-radius: 12px;
+      background: var(--panel-soft);
+      border: 1px solid var(--line);
+    }
+
+    .progress-panel.show { display: block; }
+
+    .progress-head {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 9px;
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    .progress-track {
+      height: 10px;
+      overflow: hidden;
+      border-radius: 999px;
+      background: #e6ebf2;
+    }
+
+    .progress-bar {
+      width: 0%;
+      height: 100%;
+      border-radius: inherit;
+      background: linear-gradient(90deg, #2563eb, #60a5fa);
+      transition: width 0.25s ease;
+    }
+
+    .result-panel {
+      display: none;
+      margin-top: 18px;
+      padding: 16px;
+      border: 1px solid #bbf7d0;
+      border-radius: 12px;
+      background: var(--success-soft);
+    }
+
+    .result-panel.show { display: block; }
+
+    .result-panel h4 {
+      margin: 0 0 13px;
+      color: var(--success);
+    }
+
+    .result-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+    }
+
+    .result-grid div {
+      padding: 11px;
+      border-radius: 9px;
+      background: rgba(255,255,255,0.7);
+      text-align: center;
+    }
+
+    .result-grid span {
+      display: block;
+      color: var(--muted);
+      font-size: 11px;
+      margin-bottom: 4px;
+    }
+
+    .result-grid strong {
+      color: var(--success);
+      font-size: 21px;
+    }
+
+    details {
+      margin-top: 14px;
+      border-top: 1px solid var(--line);
+      padding-top: 12px;
+    }
+
+    summary {
+      cursor: pointer;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .log {
+      margin: 10px 0 0;
+      max-height: 180px;
+      overflow: auto;
+      padding: 11px;
+      border-radius: 9px;
+      background: #101828;
+      color: #d0d5dd;
+      font: 11px/1.6 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    .sheet-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 7px;
+      margin-top: 9px;
+    }
+
+    .sheet-tag {
+      padding: 5px 8px;
+      border-radius: 999px;
+      background: var(--primary-soft);
+      color: #1d4ed8;
+      font-size: 11px;
+      font-weight: 700;
+    }
+
+    @media (max-width: 1020px) {
+      .app-shell { grid-template-columns: 1fr; }
+      aside { position: static; height: auto; }
+      .nav, .sidebar-meta { display: none; }
+      .brand { padding-bottom: 0; border: 0; }
+      .grid { grid-template-columns: 1fr; }
+    }
+
+    @media (max-width: 680px) {
+      main { padding: 18px; }
+      .topbar { flex-direction: column; }
+      .account-box { width: 100%; justify-content: space-between; }
+      .stats, .result-grid { grid-template-columns: 1fr; }
+      .config-row { grid-template-columns: 1fr; }
+      .action-bar { align-items: stretch; flex-direction: column; }
+      .action-bar button { width: 100%; }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="app-shell">
+    <aside>
+      <div class="brand">
+        <div class="brand-mark">學</div>
+        <div>
+          <h1>學生資料管理</h1>
+          <small>Excel → Google Sheets</small>
+        </div>
+      </div>
+
+      <div class="nav" aria-label="功能選單">
+        <div class="nav-item active">學生資料匯入</div>
+        <div class="nav-item">資料合併與更新</div>
+        <div class="nav-item">畢業狀態標記</div>
+      </div>
+
+      <div class="sidebar-meta">
+        目標試算表<br>
+        <strong>學生資料</strong><br>
+        授權帳號：<br>
+        maxim07260421@gmail.com
+      </div>
+    </aside>
+
+    <main>
+      <div class="topbar">
+        <div>
+          <h2>學生資料匯入</h2>
+          <p>合併三個年級分頁，以學號同步至 Google Sheets。</p>
+        </div>
+
+        <div class="account-box">
+          <span id="accountDot" class="account-dot" aria-hidden="true"></span>
+          <div class="account-text">
+            <strong id="accountState">尚未登入</strong>
+            <span id="accountEmail">請先授權 Google</span>
+          </div>
+          <button id="loginBtn" class="btn-primary" type="button">登入 Google</button>
+          <button id="logoutBtn" class="btn-danger-soft" type="button" hidden>登出</button>
+        </div>
+      </div>
+
+      <div id="fileProtocolWarning" class="warning-banner">
+        目前以 <strong>file://</strong> 開啟。Google OAuth 通常需要已授權的 HTTP/HTTPS 來源；
+        請將此單一 HTML 放到靜態網站，或以本機靜態伺服器開啟。
+      </div>
+
+      <div id="statusBanner" class="status-banner" role="alert" aria-live="polite"></div>
+
+      <div class="grid">
+        <section>
+          <div class="card">
+            <div class="card-header">
+              <div>
+                <h3>上傳 Excel</h3>
+                <p>檔案只在瀏覽器內解析，不會上傳到其他伺服器。</p>
+              </div>
+              <span class="step-badge">步驟 1</span>
+            </div>
+
+            <div class="card-body">
+              <div id="dropZone" class="drop-zone" tabindex="0" role="button" aria-label="選擇或拖曳 Excel 檔案">
+                <input id="fileInput" type="file" accept=".xlsx,.xls,.xlsm" hidden />
+                <div>
+                  <div class="upload-icon">⇧</div>
+                  <h4>拖曳 Excel 到這裡</h4>
+                  <p>或點擊選擇檔案。會讀取 114-1高一、114-1高二、114-1高三。</p>
+                  <button class="btn-secondary" type="button" id="chooseFileBtn">選擇 Excel</button>
+                </div>
+              </div>
+
+              <div id="fileMeta" class="file-meta">
+                <div>
+                  <strong id="fileName"></strong>
+                  <span id="fileInfo"></span>
+                  <div id="sheetTags" class="sheet-tags"></div>
+                </div>
+                <button id="clearFileBtn" class="btn-secondary" type="button">清除</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-header">
+              <div>
+                <h3>解析預覽</h3>
+                <p>顯示合併後前 10 筆資料。</p>
+              </div>
+              <span class="step-badge">步驟 2</span>
+            </div>
+
+            <div class="card-body">
+              <div class="stats">
+                <div class="stat">
+                  <span>有效學生</span>
+                  <strong id="validCount">0</strong>
+                </div>
+                <div class="stat">
+                  <span>來源分頁</span>
+                  <strong id="sheetCount">0 / 3</strong>
+                </div>
+                <div class="stat">
+                  <span>資料異常</span>
+                  <strong id="errorCount">0</strong>
+                </div>
+              </div>
+
+              <div class="table-wrap">
+                <table id="previewTable" hidden>
+                  <thead><tr id="previewHead"></tr></thead>
+                  <tbody id="previewBody"></tbody>
+                </table>
+                <div id="previewEmpty" class="preview-empty">尚未選擇 Excel 檔案</div>
+              </div>
+
+              <div id="progressPanel" class="progress-panel" aria-live="polite">
+                <div class="progress-head">
+                  <span id="progressText">準備中</span>
+                  <strong id="progressPercent">0%</strong>
+                </div>
+                <div class="progress-track">
+                  <div id="progressBar" class="progress-bar"></div>
+                </div>
+              </div>
+
+              <div id="resultPanel" class="result-panel">
+                <h4>同步完成</h4>
+                <div class="result-grid">
+                  <div><span>新增</span><strong id="resultNew">0</strong></div>
+                  <div><span>更新</span><strong id="resultUpdated">0</strong></div>
+                  <div><span>標記畢業</span><strong id="resultGraduated">0</strong></div>
+                </div>
+              </div>
+
+              <div class="action-bar">
+                <p class="hint">照片DriveID 不會被寫入或清除；狀態欄只處理「畢業」標記。</p>
+                <button id="uploadBtn" class="btn-primary" type="button" disabled>確認上傳</button>
+              </div>
+
+              <details>
+                <summary>顯示執行紀錄</summary>
+                <pre id="logBox" class="log">等待操作…</pre>
+              </details>
+            </div>
+          </div>
+        </section>
+
+        <section>
+          <div class="card">
+            <div class="card-header">
+              <div>
+                <h3>Google 設定</h3>
+                <p>Client ID 可直接貼入並儲存在此瀏覽器。</p>
+              </div>
+              <span class="step-badge">設定</span>
+            </div>
+            <div class="card-body">
+              <label for="clientIdInput" class="hint" style="display:block;margin:0 0 7px;">OAuth Client ID</label>
+              <div class="config-row">
+                <input id="clientIdInput" type="text" autocomplete="off" placeholder="xxxxxxxx.apps.googleusercontent.com" />
+                <button id="saveClientIdBtn" class="btn-secondary" type="button">儲存</button>
+              </div>
+              <p class="hint">
+                建立「網頁應用程式」OAuth Client，並把目前網站來源加入 Authorized JavaScript origins。
+                Client ID 不是密碼，可放在前端；存取權杖只保留在記憶體。
+              </p>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-header">
+              <div>
+                <h3>同步規則</h3>
+                <p>執行前請確認。</p>
+              </div>
+            </div>
+            <div class="card-body">
+              <ul class="check-list">
+                <li><span class="check">✓</span><span>以「學號」作為唯一主鍵。</span></li>
+                <li><span class="check">✓</span><span>已有學號：更新指定欄位。</span></li>
+                <li><span class="check">✓</span><span>新學號：新增資料列。</span></li>
+                <li><span class="check">✓</span><span>舊學號消失：在「狀態」欄標記畢業。</span></li>
+                <li><span class="check">✓</span><span>照片DriveID：完全不寫入。</span></li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-header">
+              <div>
+                <h3>欄位對應</h3>
+                <p>亞昕匯出欄位 → Sheets 欄位</p>
+              </div>
+            </div>
+            <div class="card-body">
+              <div id="mappingList" class="mapping-list"></div>
+            </div>
+          </div>
+        </section>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    "use strict";
+
+    const CONFIG = Object.freeze({
+      spreadsheetId: "10H0ZCa6lHzPaS9gzUe4VZo-yrnub22GjrpPwAi03aGk",
+      sheetName: "學生資料",
+      oauthClientId: "773530671501-med8p1v3hanhg21g5k29mjb4vr93k1as.apps.googleusercontent.com",
+      authorizedEmail: "maxim07260421@gmail.com",
+      sourceSheets: ["114-1高一", "114-1高二", "114-1高三"],
+      photoHeader: "照片DriveID",
+      photoCol: 13,   // N 欄（0-based），硬鎖，永不寫入
+      statusHeader: "狀態",
+      statusCol: 14   // O 欄（0-based）
+    });
+
+    // 高一用「班級」「座號」，高二高三用「新班級」「新座號」
+    // 解析時統一 normalize 成 Sheets 欄位名稱
+    const GRADE1_SHEET = "114-1高一";
+
+    // FIELD_MAP：[Excel來源欄位, Sheets目標欄位]
+    // 高一和高二高三班級/座號欄位名不同，由 parseSheet() 處理
+    const FIELD_MAP = Object.freeze([
+      ["學號",         "學號"],
+      ["姓名",         "姓名"],
+      ["性別",         "性別"],
+      ["出生日期",     "出生日期"],
+      ["身分證號",     "身分證號"],
+      ["通訊地址",     "住址"],
+      ["學生住家電話", "學生住家電話"],
+      ["學生手機",     "學生手機"],
+      ["監護人姓名",   "監護人姓名"],
+      ["監護人住家電話","監護人住家電話"],
+      ["監護人手機",   "監護人手機"]
+    ]);
+
+    const REQUIRED_SCOPES = Object.freeze([
+      "https://www.googleapis.com/auth/spreadsheets",
+      "https://www.googleapis.com/auth/userinfo.email"
+    ]);
+
+    const state = {
+      tokenClient: null,
+      accessToken: "",
+      email: "",
+      tokenExpiresAt: 0,
+      parsedRows: [],
+      parseErrors: [],
+      file: null,
+      busy: false,
+      librariesReady: false
+    };
+
+    const $ = (id) => document.getElementById(id);
+
+    function normalize(value) {
+      return String(value ?? "").replace(/\u3000/g, " ").trim();
+    }
+
+    function normalizeHeader(value) {
+      return normalize(value).replace(/\s+/g, "");
+    }
+
+    function escapeHtml(value) {
+      return String(value ?? "")
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+    }
+
+    function quoteSheetName(name) {
+      return "'" + String(name).replaceAll("'", "''") + "'";
+    }
+
+    function columnToLetter(indexZeroBased) {
+      let n = indexZeroBased + 1;
+      let result = "";
+      while (n > 0) {
+        const remainder = (n - 1) % 26;
+        result = String.fromCharCode(65 + remainder) + result;
+        n = Math.floor((n - 1) / 26);
+      }
+      return result;
+    }
+
+    function formatBytes(bytes) {
+      if (!Number.isFinite(bytes)) return "";
+      if (bytes < 1024) return `${bytes} B`;
+      if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+      return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
+    }
+
+    function setStatus(message, type = "info") {
+      const el = $("statusBanner");
+      el.className = `status-banner show ${type}`;
+      el.innerHTML = message;
+    }
+
+    function clearStatus() {
+      const el = $("statusBanner");
+      el.className = "status-banner";
+      el.textContent = "";
+    }
+
+    function log(message) {
+      const stamp = new Date().toLocaleTimeString("zh-TW", { hour12: false });
+      const box = $("logBox");
+      box.textContent += `\n[${stamp}] ${message}`;
+      box.scrollTop = box.scrollHeight;
+    }
+
+    function resetLog() {
+      $("logBox").textContent = "等待操作…";
+    }
+
+    function setProgress(percent, text) {
+      const safe = Math.max(0, Math.min(100, Math.round(percent)));
+      $("progressPanel").classList.add("show");
+      $("progressBar").style.width = `${safe}%`;
+      $("progressPercent").textContent = `${safe}%`;
+      $("progressText").textContent = text;
+    }
+
+    function hideProgress() {
+      $("progressPanel").classList.remove("show");
+      setProgress(0, "準備中");
+      $("progressPanel").classList.remove("show");
+    }
+
+    function getClientId() {
+      return normalize($("clientIdInput").value) || CONFIG.oauthClientId;
+    }
+
+    function updateAccountUI() {
+      const loggedIn = Boolean(state.accessToken && state.email);
+      $("accountDot").classList.toggle("online", loggedIn);
+      $("accountState").textContent = loggedIn ? "已授權" : "尚未登入";
+      $("accountEmail").textContent = loggedIn ? state.email : "請先授權 Google";
+      $("loginBtn").hidden = loggedIn;
+      $("logoutBtn").hidden = !loggedIn;
+      updateUploadButton();
+    }
+
+    function updateUploadButton() {
+      const valid = state.parsedRows.length > 0 && state.parseErrors.length === 0;
+      const loggedIn = Boolean(state.accessToken && state.email);
+      $("uploadBtn").disabled = state.busy || !valid || !loggedIn;
+    }
+
+    function renderMapping() {
+      $("mappingList").innerHTML = FIELD_MAP.map(([source, target]) => `
+        <div class="mapping-item">
+          <strong title="${escapeHtml(source)}">${escapeHtml(source)}</strong>
+          <span class="arrow">→</span>
+          <strong title="${escapeHtml(target)}">${escapeHtml(target)}</strong>
+        </div>
+      `).join("");
+    }
+
+    function waitForLibraries() {
+      let checks = 0;
+      const timer = setInterval(() => {
+        checks += 1;
+        const gisReady = Boolean(window.google?.accounts?.oauth2);
+        const xlsxReady = Boolean(window.XLSX);
+        state.librariesReady = gisReady && xlsxReady;
+        $("loginBtn").disabled = !gisReady;
+
+        if (state.librariesReady) {
+          clearInterval(timer);
+          log("SheetJS 與 Google Identity Services 已載入。");
+        } else if (checks >= 150) {
+          clearInterval(timer);
+          setStatus("外部程式庫載入失敗。請確認網路連線、內容安全政策或瀏覽器阻擋設定。", "error");
+          log("程式庫載入逾時。");
+        }
+      }, 100);
+    }
+
+    function initializeTokenClient() {
+      const clientId = getClientId();
+      if (!clientId) {
+        throw new Error("尚未設定 OAuth Client ID。請在右側貼上 Client ID 並按「儲存」。");
+      }
+      if (!window.google?.accounts?.oauth2) {
+        throw new Error("Google Identity Services 尚未載入，請重新整理頁面。");
+      }
+
+      state.tokenClient = google.accounts.oauth2.initTokenClient({
+        client_id: clientId,
+        scope: REQUIRED_SCOPES.join(" "),
+        prompt: "select_account",
+        callback: handleTokenResponse,
+        error_callback: (error) => {
+          state.busy = false;
+          updateUploadButton();
+          setStatus(`Google 授權視窗發生錯誤：${escapeHtml(error?.type || "未知錯誤")}`, "error");
+          log(`GIS 錯誤：${JSON.stringify(error)}`);
+        }
+      });
+    }
+
+    async function handleLogin() {
+      clearStatus();
+      try {
+        initializeTokenClient();
+        state.busy = true;
+        updateUploadButton();
+        log("開啟 Google 帳號授權視窗。");
+        state.tokenClient.requestAccessToken({ prompt: "select_account" });
+      } catch (error) {
+        state.busy = false;
+        updateUploadButton();
+        setStatus(escapeHtml(error.message), "error");
+        log(`登入前置檢查失敗：${error.message}`);
+      }
+    }
+
+    async function handleTokenResponse(response) {
+      try {
+        if (!response?.access_token) {
+          throw new Error(response?.error_description || response?.error || "未取得 Google 存取權杖。");
+        }
+
+        const allGranted = google.accounts.oauth2.hasGrantedAllScopes(
+          response,
+          ...REQUIRED_SCOPES
+        );
+        if (!allGranted) {
+          throw new Error("必要權限未全部授予，無法讀寫試算表或確認登入帳號。");
+        }
+
+        state.accessToken = response.access_token;
+        state.tokenExpiresAt = Date.now() + (Number(response.expires_in || 3600) * 1000);
+
+        const profile = await apiFetch("https://www.googleapis.com/oauth2/v3/userinfo", {}, false);
+        const email = normalize(profile.email).toLowerCase();
+
+        if (email !== CONFIG.authorizedEmail.toLowerCase()) {
+          const wrongEmail = email || "未知帳號";
+          google.accounts.oauth2.revoke(state.accessToken, () => {});
+          state.accessToken = "";
+          state.email = "";
+          throw new Error(`帳號不符。目前為 ${wrongEmail}，請改用 ${CONFIG.authorizedEmail}。`);
+        }
+
+        state.email = email;
+        updateAccountUI();
+        setStatus(`已使用 <strong>${escapeHtml(email)}</strong> 完成 Google 授權。`, "success");
+        log(`授權成功：${email}`);
+      } catch (error) {
+        state.accessToken = "";
+        state.email = "";
+        updateAccountUI();
+        setStatus(escapeHtml(error.message), "error");
+        log(`授權失敗：${error.message}`);
+      } finally {
+        state.busy = false;
+        updateUploadButton();
+      }
+    }
+
+    function handleLogout() {
+      const token = state.accessToken;
+      state.accessToken = "";
+      state.email = "";
+      state.tokenExpiresAt = 0;
+      state.tokenClient = null;
+      updateAccountUI();
+
+      if (token && window.google?.accounts?.oauth2) {
+        google.accounts.oauth2.revoke(token, () => {
+          log("Google 授權已撤銷。");
+        });
+      }
+      setStatus("已登出並清除本頁記憶體中的存取權杖。", "info");
+    }
+
+    async function sleep(ms) {
+      return new Promise(resolve => setTimeout(resolve, ms));
+    }
+
+    async function apiFetch(url, options = {}, requireSheetToken = true) {
+      if (requireSheetToken && !state.accessToken) {
+        throw new Error("Google 授權已失效，請重新登入。");
+      }
+
+      const headers = new Headers(options.headers || {});
+      if (state.accessToken) headers.set("Authorization", `Bearer ${state.accessToken}`);
+      if (options.body && !headers.has("Content-Type")) {
+        headers.set("Content-Type", "application/json");
+      }
+
+      let lastError;
+      for (let attempt = 0; attempt < 5; attempt += 1) {
+        let response;
+        try {
+          response = await fetch(url, { ...options, headers });
+        } catch (error) {
+          lastError = new Error(`網路連線失敗：${error.message}`);
+          if (attempt < 4) {
+            await sleep(600 * (2 ** attempt));
+            continue;
+          }
+          throw lastError;
+        }
+
+        const text = await response.text();
+        let data = {};
+        if (text) {
+          try { data = JSON.parse(text); }
+          catch { data = { raw: text }; }
+        }
+
+        if (response.ok) return data;
+
+        const apiMessage = data?.error?.message || data?.error_description || data?.raw || response.statusText;
+        lastError = new Error(`Google API ${response.status}：${apiMessage}`);
+
+        if (response.status === 401) {
+          state.accessToken = "";
+          state.email = "";
+          updateAccountUI();
+          throw new Error("Google 授權已過期，請重新登入後再上傳。");
+        }
+
+        if ([429, 500, 502, 503, 504].includes(response.status) && attempt < 4) {
+          const wait = 700 * (2 ** attempt) + Math.floor(Math.random() * 250);
+          log(`API 暫時忙碌（${response.status}），${wait}ms 後重試。`);
+          await sleep(wait);
+          continue;
+        }
+
+        throw lastError;
+      }
+
+      throw lastError || new Error("Google API 請求失敗。");
+    }
+
+    async function getSheetValues(range) {
+      const encodedRange = encodeURIComponent(range);
+      const url = `https://sheets.googleapis.com/v4/spreadsheets/${CONFIG.spreadsheetId}/values/${encodedRange}?majorDimension=ROWS&valueRenderOption=FORMATTED_VALUE&dateTimeRenderOption=FORMATTED_STRING`;
+      const data = await apiFetch(url);
+      return Array.isArray(data.values) ? data.values : [];
+    }
+
+    async function batchUpdateValues(data) {
+      if (!data.length) return;
+      const url = `https://sheets.googleapis.com/v4/spreadsheets/${CONFIG.spreadsheetId}/values:batchUpdate`;
+      await apiFetch(url, {
+        method: "POST",
+        body: JSON.stringify({
+          valueInputOption: "RAW",
+          includeValuesInResponse: false,
+          data
+        })
+      });
+    }
+
+    // 根據分頁名稱決定班級/座號欄位名稱（高一 vs 高二三）
+    function buildSheetFieldMap(sheetName) {
+      const isGrade1 = sheetName === GRADE1_SHEET;
+      const classHeader = isGrade1 ? "班級" : "新班級";
+      const seatHeader  = isGrade1 ? "座號" : "新座號";
+      return [
+        ["學號",          "學號"],
+        [classHeader,     "班級"],
+        [seatHeader,      "座號"],
+        ...FIELD_MAP
+      ];
+    }
+
+    function parseWorksheet(workbook, sheetName) {
+      const worksheet = workbook.Sheets[sheetName];
+      if (!worksheet) {
+        return { rows: [], errors: [`缺少分頁「${sheetName}」`], rawCount: 0 };
+      }
+
+      const sheetFieldMap = buildSheetFieldMap(sheetName);
+      const sourceHeaders = sheetFieldMap.map(([source]) => normalizeHeader(source));
+
+      const matrix = XLSX.utils.sheet_to_json(worksheet, {
+        header: 1, defval: "", raw: false, blankrows: false, dateNF: "yyyy/mm/dd"
+      });
+
+      // 找標題列
+      let best = { index: -1, score: -1 };
+      for (let i = 0; i < Math.min(matrix.length, 15); i++) {
+        const rowSet = new Set((matrix[i] || []).map(normalizeHeader));
+        const score = sourceHeaders.filter(h => rowSet.has(h)).length;
+        if (score > best.score) best = { index: i, score };
+      }
+
+      if (best.index < 0 || best.score < sourceHeaders.length) {
+        const row = matrix[best.index] || [];
+        const present = new Set(row.map(normalizeHeader));
+        const missing = sheetFieldMap
+          .map(([source]) => source)
+          .filter(source => !present.has(normalizeHeader(source)));
+        return {
+          rows: [],
+          errors: [`分頁「${sheetName}」欄位不完整：缺少 ${missing.join("、") || "必要欄位"}`],
+          rawCount: Math.max(0, matrix.length - Math.max(0, best.index) - 1)
+        };
+      }
+
+      const headerRow = matrix[best.index].map(normalizeHeader);
+      const sourceIndex = new Map();
+      headerRow.forEach((header, index) => {
+        if (header && !sourceIndex.has(header)) sourceIndex.set(header, index);
+      });
+
+      const rows = [];
+      const errors = [];
+      const start = best.index + 1;
+
+      for (let rowIndex = start; rowIndex < matrix.length; rowIndex++) {
+        const row = matrix[rowIndex] || [];
+        const allBlank = sheetFieldMap.every(([source]) =>
+          normalize(row[sourceIndex.get(normalizeHeader(source))]) === ""
+        );
+        if (allBlank) continue;
+
+        const studentId = normalize(row[sourceIndex.get(normalizeHeader("學號"))]);
+        if (!studentId) {
+          errors.push(`分頁「${sheetName}」第 ${rowIndex + 1} 列缺少學號`);
+          continue;
+        }
+
+        const record = { __sourceSheet: sheetName, __sourceRow: rowIndex + 1 };
+        sheetFieldMap.forEach(([source, target]) => {
+          record[target] = normalize(row[sourceIndex.get(normalizeHeader(source))]);
+        });
+        rows.push(record);
+      }
+
+      return { rows, errors, rawCount: Math.max(0, matrix.length - start) };
+    }
+
+    async function parseExcelFile(file) {
+      if (!window.XLSX) throw new Error("SheetJS 尚未載入，請重新整理後再試。");
+
+      setProgress(5, "讀取 Excel 檔案");
+      const buffer = await file.arrayBuffer();
+      const workbook = XLSX.read(buffer, {
+        type: "array",
+        cellDates: false,
+        dense: false
+      });
+
+      setProgress(20, "解析三個年級分頁");
+      const allRows = [];
+      const allErrors = [];
+      const sheetSummaries = [];
+
+      for (const sheetName of CONFIG.sourceSheets) {
+        const parsed = parseWorksheet(workbook, sheetName);
+        allRows.push(...parsed.rows);
+        allErrors.push(...parsed.errors);
+        sheetSummaries.push({
+          name: sheetName,
+          found: Boolean(workbook.Sheets[sheetName]),
+          count: parsed.rows.length
+        });
+      }
+
+      const seen = new Map();
+      for (const row of allRows) {
+        const id = normalize(row["學號"]);
+        if (seen.has(id)) {
+          const previous = seen.get(id);
+          allErrors.push(
+            `學號 ${id} 重複：${previous.__sourceSheet} 第 ${previous.__sourceRow} 列、${row.__sourceSheet} 第 ${row.__sourceRow} 列`
+          );
+        } else {
+          seen.set(id, row);
+        }
+      }
+
+      return { rows: allRows, errors: allErrors, sheetSummaries };
+    }
+
+    function renderPreview() {
+      $("validCount").textContent = state.parsedRows.length.toLocaleString("zh-TW");
+      $("errorCount").textContent = state.parseErrors.length.toLocaleString("zh-TW");
+
+      const foundSheets = CONFIG.sourceSheets.filter(name =>
+        state.lastSheetSummaries?.some(item => item.name === name && item.found)
+      ).length;
+      $("sheetCount").textContent = `${foundSheets} / ${CONFIG.sourceSheets.length}`;
+
+      if (!state.parsedRows.length) {
+        $("previewTable").hidden = true;
+        $("previewEmpty").hidden = false;
+        $("previewEmpty").textContent = state.parseErrors.length
+          ? "Excel 解析失敗，請查看上方錯誤提示或執行紀錄。"
+          : "尚未選擇 Excel 檔案";
+        return;
+      }
+
+      const previewTargets = ["學號","班級","座號","姓名","性別","出生日期","身分證號","住址","學生住家電話","學生手機","監護人姓名","監護人住家電話","監護人手機"];
+      const previewHeaders = ["來源", ...previewTargets];
+      $("previewHead").innerHTML = previewHeaders.map(header => `<th>${escapeHtml(header)}</th>`).join("");
+
+      $("previewBody").innerHTML = state.parsedRows.slice(0, 10).map(row => {
+        const cells = [
+          row.__sourceSheet,
+          ...previewTargets.map(target => row[target] || "")
+        ];
+        return `<tr>${cells.map(value => `<td title="${escapeHtml(value)}">${escapeHtml(value)}</td>`).join("")}</tr>`;
+      }).join("");
+
+      $("previewTable").hidden = false;
+      $("previewEmpty").hidden = true;
+    }
+
+    async function handleFile(file) {
+      if (!file) return;
+      clearStatus();
+      hideProgress();
+      $("resultPanel").classList.remove("show");
+      resetLog();
+
+      const extension = file.name.split(".").pop().toLowerCase();
+      if (!["xlsx", "xls", "xlsm"].includes(extension)) {
+        setStatus("檔案格式不支援，請選擇 .xlsx、.xls 或 .xlsm。", "error");
+        return;
+      }
+
+      state.busy = true;
+      state.file = file;
+      updateUploadButton();
+
+      $("fileName").textContent = file.name;
+      $("fileInfo").textContent = `${formatBytes(file.size)}｜最後修改 ${new Date(file.lastModified).toLocaleString("zh-TW")}`;
+      $("fileMeta").classList.add("show");
+
+      try {
+        log(`開始解析：${file.name}`);
+        const result = await parseExcelFile(file);
+        state.parsedRows = result.rows;
+        state.parseErrors = result.errors;
+        state.lastSheetSummaries = result.sheetSummaries;
+
+        $("sheetTags").innerHTML = result.sheetSummaries.map(item =>
+          `<span class="sheet-tag">${escapeHtml(item.name)}：${item.found ? `${item.count} 筆` : "缺少"}</span>`
+        ).join("");
+
+        renderPreview();
+
+        if (result.errors.length) {
+          const firstErrors = result.errors.slice(0, 8).map(error => `<li>${escapeHtml(error)}</li>`).join("");
+          const more = result.errors.length > 8 ? `<li>另有 ${result.errors.length - 8} 項錯誤，請查看執行紀錄。</li>` : "";
+          setStatus(`<strong>Excel 驗證未通過：</strong><ul style="margin:7px 0 0;padding-left:20px">${firstErrors}${more}</ul>`, "error");
+          result.errors.forEach(error => log(`驗證錯誤：${error}`));
+        } else {
+          setStatus(`Excel 解析成功，共 <strong>${result.rows.length.toLocaleString("zh-TW")}</strong> 筆有效學生資料。`, "success");
+          log(`解析成功：${result.rows.length} 筆，三個指定分頁皆通過驗證。`);
+        }
+        setProgress(100, result.errors.length ? "解析完成，但有錯誤" : "解析完成");
+      } catch (error) {
+        state.parsedRows = [];
+        state.parseErrors = [error.message];
+        state.lastSheetSummaries = [];
+        renderPreview();
+        setStatus(`Excel 解析失敗：${escapeHtml(error.message)}`, "error");
+        log(`解析失敗：${error.stack || error.message}`);
+        setProgress(100, "解析失敗");
+      } finally {
+        state.busy = false;
+        updateUploadButton();
+      }
+    }
+
+    function clearFile() {
+      state.file = null;
+      state.parsedRows = [];
+      state.parseErrors = [];
+      state.lastSheetSummaries = [];
+      $("fileInput").value = "";
+      $("fileMeta").classList.remove("show");
+      $("sheetTags").innerHTML = "";
+      $("resultPanel").classList.remove("show");
+      hideProgress();
+      clearStatus();
+      renderPreview();
+      resetLog();
+      updateUploadButton();
+    }
+
+    function locateSheetsHeader(values) {
+      const idHeader = normalizeHeader("學號");
+      for (let index = 0; index < Math.min(values.length, 20); index += 1) {
+        if ((values[index] || []).map(normalizeHeader).includes(idHeader)) {
+          return index;
+        }
+      }
+      return -1;
+    }
+
+    function buildHeaderMap(headers) {
+      const map = new Map();
+      const duplicates = [];
+
+      headers.forEach((header, index) => {
+        const key = normalizeHeader(header);
+        if (!key) return;
+        if (map.has(key)) duplicates.push(normalize(header));
+        else map.set(key, index);
+      });
+
+      if (duplicates.length) {
+        throw new Error(`Google Sheets 標題列有重複欄名：${[...new Set(duplicates)].join("、")}`);
+      }
+      return map;
+    }
+
+    async function prepareSheetStructure(values) {
+      let headerRowIndex = locateSheetsHeader(values);
+      let headers;
+      let initializedEmptySheet = false;
+
+      if (headerRowIndex === -1) {
+        const hasAnyData = values.some(row => (row || []).some(cell => normalize(cell) !== ""));
+        if (hasAnyData) {
+          throw new Error("Google Sheets 找不到「學號」標題欄，無法安全比對既有資料。");
+        }
+        headerRowIndex = 0;
+        headers = [];
+        initializedEmptySheet = true;
+      } else {
+        headers = [...(values[headerRowIndex] || [])];
+      }
+
+      let headerMap = buildHeaderMap(headers);
+      const targetHeaders = FIELD_MAP.map(([, target]) => target);
+      const existingDataRows = values.slice(headerRowIndex + 1);
+      const hasStudentData = existingDataRows.some(row => {
+        const idIndex = headerMap.get(normalizeHeader("學號"));
+        return idIndex !== undefined && normalize(row?.[idIndex]) !== "";
+      });
+
+      if (!initializedEmptySheet && hasStudentData && !headerMap.has(normalizeHeader(CONFIG.photoHeader))) {
+        throw new Error(`Google Sheets 已有學生資料，但找不到「${CONFIG.photoHeader}」欄。為避免誤寫，已停止同步。`);
+      }
+
+      const requiredHeaders = [
+        ...targetHeaders,
+        CONFIG.photoHeader,
+        CONFIG.statusHeader
+      ];
+
+      const headerUpdates = [];
+      for (const requiredHeader of requiredHeaders) {
+        const key = normalizeHeader(requiredHeader);
+        if (!headerMap.has(key)) {
+          const newIndex = headers.length;
+          headers.push(requiredHeader);
+          headerMap.set(key, newIndex);
+          headerUpdates.push({
+            range: `${quoteSheetName(CONFIG.sheetName)}!${columnToLetter(newIndex)}${headerRowIndex + 1}`,
+            majorDimension: "ROWS",
+            values: [[requiredHeader]]
+          });
+        }
+      }
+
+      if (headerUpdates.length) {
+        log(`新增 Sheets 標題欄：${headerUpdates.map(item => item.values[0][0]).join("、")}`);
+        await batchUpdateValues(headerUpdates);
+      }
+
+      return {
+        headerRowIndex,
+        headers,
+        headerMap: buildHeaderMap(headers)
+      };
+    }
+
+    function contiguousSegments(columnIndexes) {
+      const sorted = [...new Set(columnIndexes)].sort((a, b) => a - b);
+      if (!sorted.length) return [];
+
+      const segments = [];
+      let start = sorted[0];
+      let previous = sorted[0];
+
+      for (let i = 1; i < sorted.length; i += 1) {
+        const current = sorted[i];
+        if (current === previous + 1) {
+          previous = current;
+          continue;
+        }
+        segments.push([start, previous]);
+        start = current;
+        previous = current;
+      }
+      segments.push([start, previous]);
+      return segments;
+    }
+
+    function createSyncPlan(values, structure) {
+      const { headerRowIndex, headerMap } = structure;
+      const studentIdCol = headerMap.get(normalizeHeader("學號"));
+      const statusCol = headerMap.get(normalizeHeader(CONFIG.statusHeader));
+      const photoCol = headerMap.get(normalizeHeader(CONFIG.photoHeader));
+
+      if (studentIdCol === undefined || statusCol === undefined || photoCol === undefined) {
+        throw new Error("Sheets 欄位初始化失敗。");
+      }
+
+      const existingById = new Map();
+      const existingRows = [];
+
+      for (let rowIndex = headerRowIndex + 1; rowIndex < values.length; rowIndex += 1) {
+        const row = values[rowIndex] || [];
+        const studentId = normalize(row[studentIdCol]);
+        if (!studentId) continue;
+
+        if (existingById.has(studentId)) {
+          throw new Error(`Google Sheets 內有重複學號 ${studentId}，請先整理後再同步。`);
+        }
+
+        const entry = {
+          studentId,
+          rowIndex,
+          sheetRowNumber: rowIndex + 1,
+          row
+        };
+        existingById.set(studentId, entry);
+        existingRows.push(entry);
+      }
+
+      const incomingIds = new Set();
+      const newRows = [];
+      const matchedRows = [];
+
+      for (const incoming of state.parsedRows) {
+        const studentId = normalize(incoming["學號"]);
+        incomingIds.add(studentId);
+        const existing = existingById.get(studentId);
+        if (existing) matchedRows.push({ incoming, existing });
+        else newRows.push(incoming);
+      }
+
+      const graduateRows = existingRows.filter(entry => {
+        if (incomingIds.has(entry.studentId)) return false;
+        return normalize(entry.row[statusCol]) !== "畢業";
+      });
+
+      return {
+        newRows,
+        matchedRows,
+        graduateRows,
+        existingById,
+        statusCol,
+        photoCol
+      };
+    }
+
+    // 所有需要寫入 Sheets 的目標欄位（含班級、座號）
+    const ALL_WRITE_FIELDS = [
+      "學號","班級","座號","姓名","性別","出生日期","身分證號",
+      "住址","學生住家電話","學生手機","監護人姓名","監護人住家電話","監護人手機"
+    ];
+
+        function makeExistingUpdateRanges(plan, structure) {
+      const targetColumnToHeader = new Map();
+      ALL_WRITE_FIELDS.forEach(target => {
+        const col = structure.headerMap.get(normalizeHeader(target));
+        if (col !== undefined) targetColumnToHeader.set(col, target);
+      });
+
+      const targetColumns = [...targetColumnToHeader.keys()];
+      if (targetColumns.includes(plan.photoCol)) {
+        throw new Error("內部安全檢查失敗：照片DriveID 被納入更新欄位。");
+      }
+
+      const segments = contiguousSegments(targetColumns);
+      const updates = [];
+
+      for (const item of plan.matchedRows) {
+        for (const [startCol, endCol] of segments) {
+          const rowValues = [];
+          for (let col = startCol; col <= endCol; col += 1) {
+            const targetHeader = targetColumnToHeader.get(col);
+            if (targetHeader === undefined) {
+              throw new Error("欄位區段建立失敗，已停止同步。");
+            }
+            rowValues.push(normalize(item.incoming[targetHeader]));
+          }
+
+          updates.push({
+            range: `${quoteSheetName(CONFIG.sheetName)}!${columnToLetter(startCol)}${item.existing.sheetRowNumber}:${columnToLetter(endCol)}${item.existing.sheetRowNumber}`,
+            majorDimension: "ROWS",
+            values: [rowValues]
+          });
+        }
+
+        if (normalize(item.existing.row[plan.statusCol]) === "畢業") {
+          updates.push({
+            range: `${quoteSheetName(CONFIG.sheetName)}!${columnToLetter(plan.statusCol)}${item.existing.sheetRowNumber}`,
+            majorDimension: "ROWS",
+            values: [[""]]
+          });
+        }
+      }
+
+      return updates;
+    }
+
+    function makeGraduateUpdateRanges(plan) {
+      return plan.graduateRows.map(item => ({
+        range: `${quoteSheetName(CONFIG.sheetName)}!${columnToLetter(plan.statusCol)}${item.sheetRowNumber}`,
+        majorDimension: "ROWS",
+        values: [["畢業"]]
+      }));
+    }
+
+    function makeNewRowUpdateRanges(plan, structure, startRowNumber) {
+      if (!plan.newRows.length) return [];
+
+      const targetColumnToHeader = new Map();
+      ALL_WRITE_FIELDS.forEach(target => {
+        const col = structure.headerMap.get(normalizeHeader(target));
+        if (col !== undefined) targetColumnToHeader.set(col, target);
+      });
+
+      const targetColumns = [...targetColumnToHeader.keys()];
+      if (targetColumns.includes(plan.photoCol)) {
+        throw new Error("內部安全檢查失敗：新資料包含照片DriveID。");
+      }
+
+      const segments = contiguousSegments(targetColumns);
+      const endRowNumber = startRowNumber + plan.newRows.length - 1;
+
+      return segments.map(([startCol, endCol]) => {
+        const matrix = plan.newRows.map(incoming => {
+          const rowValues = [];
+          for (let col = startCol; col <= endCol; col += 1) {
+            const targetHeader = targetColumnToHeader.get(col);
+            if (targetHeader === undefined) {
+              throw new Error("新增資料欄位區段建立失敗。");
+            }
+            rowValues.push(normalize(incoming[targetHeader]));
+          }
+          return rowValues;
+        });
+
+        return {
+          range: `${quoteSheetName(CONFIG.sheetName)}!${columnToLetter(startCol)}${startRowNumber}:${columnToLetter(endCol)}${endRowNumber}`,
+          majorDimension: "ROWS",
+          values: matrix
+        };
+      });
+    }
+
+    async function writeInChunks(ranges, chunkSize, progressStart, progressEnd, label) {
+      if (!ranges.length) {
+        setProgress(progressEnd, `${label}：無資料`);
+        return;
+      }
+
+      const chunks = [];
+      for (let i = 0; i < ranges.length; i += chunkSize) {
+        chunks.push(ranges.slice(i, i + chunkSize));
+      }
+
+      for (let i = 0; i < chunks.length; i += 1) {
+        await batchUpdateValues(chunks[i]);
+        const ratio = (i + 1) / chunks.length;
+        setProgress(progressStart + ((progressEnd - progressStart) * ratio), `${label}（${i + 1}/${chunks.length}）`);
+      }
+    }
+
+    async function synchronize() {
+      if (state.busy) return;
+      if (!state.accessToken || !state.email) {
+        setStatus("請先登入 Google。", "error");
+        return;
+      }
+      if (!state.parsedRows.length || state.parseErrors.length) {
+        setStatus("Excel 尚未通過驗證，無法上傳。", "error");
+        return;
+      }
+
+      const confirmed = window.confirm(
+        `即將同步 ${state.parsedRows.length} 筆學生資料至「${CONFIG.sheetName}」。\n\n` +
+        "系統會更新既有資料、新增新學號，並將新 Excel 中消失的舊學號標記為「畢業」。\n" +
+        "照片DriveID 不會被寫入。\n\n確定繼續？"
+      );
+      if (!confirmed) return;
+
+      state.busy = true;
+      updateUploadButton();
+      clearStatus();
+      $("resultPanel").classList.remove("show");
+      resetLog();
+
+      try {
+        if (state.tokenExpiresAt && Date.now() > state.tokenExpiresAt - 30_000) {
+          throw new Error("Google 存取權杖已接近過期，請登出後重新登入再上傳。");
+        }
+
+        setProgress(5, "讀取 Google Sheets");
+        log(`讀取試算表：${CONFIG.sheetName}`);
+        const range = `${quoteSheetName(CONFIG.sheetName)}!A:ZZ`;
+        const values = await getSheetValues(range);
+
+        setProgress(18, "檢查 Sheets 欄位結構");
+        const structure = await prepareSheetStructure(values);
+
+        // 重新讀取一次，確保新增標題後資料與欄位索引一致。
+        const refreshedValues = await getSheetValues(range);
+
+        setProgress(28, "比對學號並建立同步計畫");
+        const refreshedStructure = {
+          headerRowIndex: locateSheetsHeader(refreshedValues),
+          headers: [...(refreshedValues[locateSheetsHeader(refreshedValues)] || [])]
+        };
+        refreshedStructure.headerMap = buildHeaderMap(refreshedStructure.headers);
+
+        const plan = createSyncPlan(refreshedValues, refreshedStructure);
+        log(`同步計畫：新增 ${plan.newRows.length}、更新 ${plan.matchedRows.length}、標記畢業 ${plan.graduateRows.length}。`);
+
+        const existingUpdates = makeExistingUpdateRanges(plan, refreshedStructure);
+        const graduateUpdates = makeGraduateUpdateRanges(plan);
+
+        setProgress(35, "更新既有學生");
+        await writeInChunks(existingUpdates, 400, 35, 70, "更新既有學生");
+
+        setProgress(72, "標記畢業狀態");
+        await writeInChunks(graduateUpdates, 400, 72, 84, "標記畢業狀態");
+
+        const lastUsedRow = Math.max(
+          refreshedValues.length,
+          refreshedStructure.headerRowIndex + 1
+        );
+        const newRowStart = lastUsedRow + 1;
+        const newRowUpdates = makeNewRowUpdateRanges(plan, refreshedStructure, newRowStart);
+
+        setProgress(86, "新增學生資料");
+        await writeInChunks(newRowUpdates, 20, 86, 97, "新增學生資料");
+
+        setProgress(100, "同步完成");
+        $("resultNew").textContent = plan.newRows.length.toLocaleString("zh-TW");
+        $("resultUpdated").textContent = plan.matchedRows.length.toLocaleString("zh-TW");
+        $("resultGraduated").textContent = plan.graduateRows.length.toLocaleString("zh-TW");
+        $("resultPanel").classList.add("show");
+
+        setStatus(
+          `同步成功：新增 <strong>${plan.newRows.length}</strong> 筆、更新 <strong>${plan.matchedRows.length}</strong> 筆、標記畢業 <strong>${plan.graduateRows.length}</strong> 筆。`,
+          "success"
+        );
+        log("同步完成。照片DriveID 全程未納入任何寫入範圍。");
+      } catch (error) {
+        setProgress(100, "同步失敗");
+        setStatus(`同步失敗：${escapeHtml(error.message)}`, "error");
+        log(`同步失敗：${error.stack || error.message}`);
+      } finally {
+        state.busy = false;
+        updateUploadButton();
+      }
+    }
+
+    function bindEvents() {
+      $("loginBtn").addEventListener("click", handleLogin);
+      $("logoutBtn").addEventListener("click", handleLogout);
+      $("uploadBtn").addEventListener("click", synchronize);
+
+      $("saveClientIdBtn").addEventListener("click", () => {
+        const clientId = normalize($("clientIdInput").value);
+        if (!clientId) {
+          localStorage.removeItem("studentAdminOAuthClientId");
+          setStatus("已清除瀏覽器內儲存的 OAuth Client ID。", "info");
+          log("清除 OAuth Client ID。");
+          return;
+        }
+        if (!clientId.endsWith(".apps.googleusercontent.com")) {
+          setStatus("Client ID 格式看起來不正確，應以 .apps.googleusercontent.com 結尾。", "error");
+          return;
+        }
+        localStorage.setItem("studentAdminOAuthClientId", clientId);
+        state.tokenClient = null;
+        setStatus("OAuth Client ID 已儲存在此瀏覽器。", "success");
+        log("OAuth Client ID 已更新。");
+      });
+
+      const openFilePicker = () => $("fileInput").click();
+      $("chooseFileBtn").addEventListener("click", (event) => {
+        event.stopPropagation();
+        openFilePicker();
+      });
+      $("dropZone").addEventListener("click", openFilePicker);
+      $("dropZone").addEventListener("keydown", (event) => {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          openFilePicker();
+        }
+      });
+      $("fileInput").addEventListener("change", (event) => handleFile(event.target.files?.[0]));
+      $("clearFileBtn").addEventListener("click", clearFile);
+
+      ["dragenter", "dragover"].forEach(eventName => {
+        $("dropZone").addEventListener(eventName, event => {
+          event.preventDefault();
+          event.stopPropagation();
+          $("dropZone").classList.add("dragover");
+        });
+      });
+
+      ["dragleave", "drop"].forEach(eventName => {
+        $("dropZone").addEventListener(eventName, event => {
+          event.preventDefault();
+          event.stopPropagation();
+          $("dropZone").classList.remove("dragover");
+        });
+      });
+
+      $("dropZone").addEventListener("drop", event => {
+        const file = event.dataTransfer?.files?.[0];
+        if (file) handleFile(file);
+      });
+    }
+
+    function initialize() {
+      renderMapping();
+      bindEvents();
+
+      const storedClientId = localStorage.getItem("studentAdminOAuthClientId");
+      $("clientIdInput").value = storedClientId || CONFIG.oauthClientId;
+
+      if (location.protocol === "file:") {
+        $("fileProtocolWarning").classList.add("show");
+      }
+
+      $("loginBtn").disabled = true;
+      updateAccountUI();
+      renderPreview();
+      waitForLibraries();
+    }
+
+    document.addEventListener("DOMContentLoaded", initialize);
+  </script>
+</body>
+</html>
