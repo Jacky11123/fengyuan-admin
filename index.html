@@ -890,6 +890,7 @@
     const CONFIG = Object.freeze({
       spreadsheetId: "10H0ZCa6lHzPaS9gzUe4VZo-yrnub22GjrpPwAi03aGk",
       sheetName: "學生資料",
+      contactSheetName: "緊急聯絡人",
       oauthClientId: "773530671501-med8p1v3hanhg21g5k29mjb4vr93k1as.apps.googleusercontent.com",
       authorizedEmail: "maxim07260421@gmail.com",
       sourceSheets: ["114-1高一", "114-1高二", "114-1高三"],
@@ -1246,18 +1247,52 @@
       });
     }
 
+    async function clearSheetValues(range) {
+      const encodedRange = encodeURIComponent(range);
+      const url = `https://sheets.googleapis.com/v4/spreadsheets/${CONFIG.spreadsheetId}/values/${encodedRange}:clear`;
+      await apiFetch(url, {
+        method: "POST",
+        body: JSON.stringify({})
+      });
+    }
+
+    async function replaceEmergencyContacts(rows) {
+      const contactRows = rows.map(row => [
+        normalize(row["學號"]),
+        normalize(row["監護人姓名"]),
+        "",
+        normalize(row["監護人手機"]) || normalize(row["監護人住家電話"])
+      ]);
+
+      const clearRange = `${quoteSheetName(CONFIG.contactSheetName)}!A2:D`;
+      await clearSheetValues(clearRange);
+
+      if (!contactRows.length) return 0;
+
+      const endRow = contactRows.length + 1;
+      await batchUpdateValues([{
+        range: `${quoteSheetName(CONFIG.contactSheetName)}!A2:D${endRow}`,
+        majorDimension: "ROWS",
+        values: contactRows
+      }]);
+
+      return contactRows.length;
+    }
+
     // 根據分頁名稱決定各欄位名稱（高一 vs 高二三欄位名不同）
     function buildSheetFieldMap(sheetName) {
-      const isGrade1 = sheetName === "114-1高一";
-
+      const isGrade1 = sheetName === GRADE1_SHEET;
+      const classHeader = isGrade1 ? "班級"         : "新班級";
+      const seatHeader  = isGrade1 ? "座號"         : "新座號";
+      const idHeader    = isGrade1 ? "身分證統一編號" : "身分證號";
       return [
         ["學號",          "學號"],
-        [isGrade1 ? "班級" : "新班級", "班級"],
-        [isGrade1 ? "座號" : "新座號", "座號"],
+        [classHeader,     "班級"],
+        [seatHeader,      "座號"],
         ["姓名",          "姓名"],
         ["性別",          "性別"],
         ["出生日期",      "出生日期"],
-        [isGrade1 ? "身分證統一編號" : "身分證號", "身分證號"],
+        [idHeader,        "身分證號"],
         ["通訊地址",      "住址"],
         ["學生住家電話",  "學生住家電話"],
         ["學生手機",      "學生手機"],
@@ -1784,7 +1819,7 @@
       const confirmed = window.confirm(
         `即將同步 ${state.parsedRows.length} 筆學生資料至「${CONFIG.sheetName}」。\n\n` +
         "系統會更新既有資料、新增新學號，並將新 Excel 中消失的舊學號標記為「畢業」。\n" +
-        "照片DriveID 不會被寫入。\n\n確定繼續？"
+        "同時會清空並重建「緊急聯絡人」分頁 A2:D；照片DriveID 不會被寫入。\n\n確定繼續？"
       );
       if (!confirmed) return;
 
@@ -1839,6 +1874,11 @@
         setProgress(86, "新增學生資料");
         await writeInChunks(newRowUpdates, 20, 86, 97, "新增學生資料");
 
+        setProgress(98, "重建緊急聯絡人");
+        log(`清空並重建試算表：${CONFIG.contactSheetName}`);
+        const contactCount = await replaceEmergencyContacts(state.parsedRows);
+        log(`緊急聯絡人寫入完成：${contactCount} 筆。`);
+
         setProgress(100, "同步完成");
         $("resultNew").textContent = plan.newRows.length.toLocaleString("zh-TW");
         $("resultUpdated").textContent = plan.matchedRows.length.toLocaleString("zh-TW");
@@ -1846,10 +1886,10 @@
         $("resultPanel").classList.add("show");
 
         setStatus(
-          `同步成功：新增 <strong>${plan.newRows.length}</strong> 筆、更新 <strong>${plan.matchedRows.length}</strong> 筆、標記畢業 <strong>${plan.graduateRows.length}</strong> 筆。`,
+          `同步成功：新增 <strong>${plan.newRows.length}</strong> 筆、更新 <strong>${plan.matchedRows.length}</strong> 筆、標記畢業 <strong>${plan.graduateRows.length}</strong> 筆；緊急聯絡人 <strong>${contactCount}</strong> 筆。`,
           "success"
         );
-        log("同步完成。照片DriveID 全程未納入任何寫入範圍。");
+        log("同步完成。照片DriveID 全程未納入任何寫入範圍；緊急聯絡人 A2:D 已整批重建。");
       } catch (error) {
         setProgress(100, "同步失敗");
         setStatus(`同步失敗：${escapeHtml(error.message)}`, "error");
