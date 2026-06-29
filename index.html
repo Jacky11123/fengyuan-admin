@@ -1248,18 +1248,16 @@
 
     // 根據分頁名稱決定各欄位名稱（高一 vs 高二三欄位名不同）
     function buildSheetFieldMap(sheetName) {
-      const isGrade1 = sheetName === GRADE1_SHEET;
-      const classHeader = isGrade1 ? "班級"         : "新班級";
-      const seatHeader  = isGrade1 ? "座號"         : "新座號";
-      const idHeader    = isGrade1 ? "身分證統一編號" : "身分證號";
+      const isGrade1 = sheetName === "114-1高一";
+
       return [
         ["學號",          "學號"],
-        [classHeader,     "班級"],
-        [seatHeader,      "座號"],
+        [isGrade1 ? "班級" : "新班級", "班級"],
+        [isGrade1 ? "座號" : "新座號", "座號"],
         ["姓名",          "姓名"],
         ["性別",          "性別"],
         ["出生日期",      "出生日期"],
-        [idHeader,        "身分證號"],
+        [isGrade1 ? "身分證統一編號" : "身分證號", "身分證號"],
         ["通訊地址",      "住址"],
         ["學生住家電話",  "學生住家電話"],
         ["學生手機",      "學生手機"],
